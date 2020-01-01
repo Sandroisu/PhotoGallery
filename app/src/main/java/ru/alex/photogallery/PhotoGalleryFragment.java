@@ -6,6 +6,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -22,6 +24,7 @@ public class PhotoGalleryFragment extends Fragment {
     private RecyclerView mPhotoRecyclerView;
     private static final String TAG = "PhotoGalleryFragment";
     private List<GalleryItem> mItems = new ArrayList<>();
+    private int x, y=1;
 
     public static PhotoGalleryFragment newInstance(){
         return new PhotoGalleryFragment();
@@ -31,23 +34,53 @@ public class PhotoGalleryFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+
         new FetchItemsTask().execute();
     }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View v = inflater.inflate(R.layout.fragment_photo_gallery,
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable final ViewGroup container, @Nullable Bundle savedInstanceState) {
+        final View v = inflater.inflate(R.layout.fragment_photo_gallery,
                 container, false);
         mPhotoRecyclerView = v.findViewById(R.id.photo_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),
-                3));
-        setupAdapter();
+
+
+
+
+
         return v;
+    }
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+
+        setupAdapter();
+
+
 
     }
+
     private void setupAdapter() {
         if (isAdded()) {
+            ViewTreeObserver mViewTreeObserver = mPhotoRecyclerView.getViewTreeObserver();
+            mViewTreeObserver.addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    x = mPhotoRecyclerView.getHeight();
+                    if (x>1900){
+                        y = 4;
+                    }else {
+                        y = 2;
+                    }
+
+                }
+            });
+            mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),
+                    y));
             mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
         }
     }
@@ -106,4 +139,5 @@ public class PhotoGalleryFragment extends Fragment {
             return mGalleryItems.size();
         }
     }
+
 }
