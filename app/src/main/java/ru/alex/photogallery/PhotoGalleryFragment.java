@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,10 +15,13 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PhotoGalleryFragment extends Fragment {
     private RecyclerView mPhotoRecyclerView;
     private static final String TAG = "PhotoGalleryFragment";
+    private List<GalleryItem> mItems = new ArrayList<>();
 
     public static PhotoGalleryFragment newInstance(){
         return new PhotoGalleryFragment();
@@ -38,22 +42,68 @@ public class PhotoGalleryFragment extends Fragment {
         mPhotoRecyclerView = v.findViewById(R.id.photo_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),
                 3));
+        setupAdapter();
         return v;
 
     }
+    private void setupAdapter() {
+        if (isAdded()) {
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+        }
+    }
 
-    private class FetchItemsTask extends AsyncTask<Void,Void,Void>{
+    private class FetchItemsTask extends AsyncTask<Void,Void,List<GalleryItem>>{
 
         @Override
-        protected Void doInBackground(Void... voids) {
-            try {
-                String result = new FlickrFetchr()
-                        .getUrlString("https://bignerdranch.com");
-                Log.i(TAG, "Fetched contents of URL: "+result);
-            }catch (IOException ioe){
-                Log.e(TAG, "Failed to fetch URL: ", ioe);
-            }
-        return null;
+        protected List<GalleryItem> doInBackground(Void... voids) {
+          return new FlickrFetchr().fetchItems();
+
+        }
+
+        @Override
+        protected void onPostExecute(List<GalleryItem> galleryItems) {
+            mItems = galleryItems;
+            setupAdapter();
+        }
+    }
+
+    private class PhotoHolder extends RecyclerView.ViewHolder {
+        private TextView mTitleTextView;
+
+        public PhotoHolder(@NonNull View itemView) {
+            super(itemView);
+
+            mTitleTextView = (TextView) itemView;
+        }
+
+        public void bindGalleryItem (GalleryItem item){
+            mTitleTextView.setText(item.toString());
+        }
+    }
+
+    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
+        private List<GalleryItem> mGalleryItems;
+
+        public PhotoAdapter(List<GalleryItem> galleryItems){
+            mGalleryItems = galleryItems;
+        }
+
+        @NonNull
+        @Override
+        public PhotoHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            TextView textView = new TextView(getActivity());
+            return new PhotoHolder(textView);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
+            GalleryItem galleryItem = mGalleryItems.get(position);
+            holder.bindGalleryItem(galleryItem);
+        }
+
+        @Override
+        public int getItemCount() {
+            return mGalleryItems.size();
         }
     }
 }
