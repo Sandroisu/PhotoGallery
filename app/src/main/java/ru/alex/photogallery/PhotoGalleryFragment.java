@@ -26,8 +26,29 @@ public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
     private List<GalleryItem> mItems = new ArrayList<>();
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
+    PhotoHolder mPhotoHolder;
 
-    public static PhotoGalleryFragment newInstance(){
+    public int getFirstPosition() {
+        return firstPosition;
+    }
+
+    public void setFirstPosition(int firstPosition) {
+        this.firstPosition = firstPosition;
+    }
+
+    public int getLastPosition() {
+        return lastPosition;
+    }
+
+    public void setLastPosition(int lastPosition) {
+        this.lastPosition = lastPosition;
+    }
+
+    int firstPosition;
+    int lastPosition;
+
+
+    public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
     }
 
@@ -42,13 +63,13 @@ public class PhotoGalleryFragment extends Fragment {
         mThumbnailDownloader.setThumbnailDownloadListener(new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>() {
             @Override
             public void onThumbnailDownloaded(PhotoHolder target, Bitmap thumbnail) {
-            Drawable drawable = new BitmapDrawable(getResources(), thumbnail);
-            target.bindDrawable(drawable);
+                Drawable drawable = new BitmapDrawable(getResources(), thumbnail);
+                target.bindDrawable(drawable);
             }
         });
         mThumbnailDownloader.start();
         mThumbnailDownloader.getLooper();
-        Log.i (TAG, "Background thread stated");
+        Log.i(TAG, "Background thread stated");
 
     }
 
@@ -58,23 +79,39 @@ public class PhotoGalleryFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_photo_gallery,
                 container, false);
         mPhotoRecyclerView = v.findViewById(R.id.photo_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),
-                3));
+        final GridLayoutManager mGridLayoutManager = new GridLayoutManager(getActivity(), 3);
+        mPhotoRecyclerView.setLayoutManager(mGridLayoutManager);
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                firstPosition = mGridLayoutManager.findFirstVisibleItemPosition();
+                lastPosition = mGridLayoutManager.findLastVisibleItemPosition();
+
+                for (int currentPosition = firstPosition; currentPosition <= lastPosition; currentPosition++) {
+                    String url = mItems.get(currentPosition).getmUrl();
+                    if (mThumbnailDownloader.mLruCache.get(url) == null) {
+
+                    }
+                }
+            }
+        });
         setupAdapter();
         return v;
 
     }
+
     private void setupAdapter() {
         if (isAdded()) {
             mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void,Void,List<GalleryItem>>{
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
 
         @Override
-        protected List    <GalleryItem> doInBackground(Void... voids) {
-          return new FlickrFetchr().fetchItems();
+        protected List<GalleryItem> doInBackground(Void... voids) {
+            return new FlickrFetchr().fetchItems();
 
         }
 
@@ -99,10 +136,10 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
+    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
         private List<GalleryItem> mGalleryItems;
 
-        public PhotoAdapter(List<GalleryItem> galleryItems){
+        public PhotoAdapter(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
@@ -111,15 +148,25 @@ public class PhotoGalleryFragment extends Fragment {
         public PhotoHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
             View view = inflater.inflate(R.layout.gallery_item, parent, false);
-            return new PhotoHolder(view);
+            PhotoHolder mPH =  new PhotoHolder(view);
+            return mPH;
         }
 
         @Override
         public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
-            Drawable placeholder = getResources().getDrawable(R.drawable.ic);
-            holder.bindDrawable(placeholder);
-            mThumbnailDownloader.queueThumbnail(holder, galleryItem.getmUrl());
+            String url              = galleryItem.getmUrl();
+            Bitmap bitmap           = mThumbnailDownloader.mLruCache.get(url);
+            if(bitmap == null) {
+                Drawable placeholder = getResources().getDrawable(R.drawable.ic);
+                holder.bindDrawable(placeholder);
+                mThumbnailDownloader.queueThumbnail(holder, galleryItem.getmUrl());
+            }else {
+                Drawable drawable = new BitmapDrawable(getResources(), bitmap);
+                holder.bindDrawable(drawable);
+            }
+
+
         }
 
         @Override
@@ -139,7 +186,13 @@ public class PhotoGalleryFragment extends Fragment {
         super.onDestroy();
 
         mThumbnailDownloader.quit();
-        Log.i (TAG, "Background thread destroyed");
+        Log.i(TAG, "Background thread destroyed");
 
     }
+
+    public void bind (PhotoHolder mPH) {
+        mPhotoHolder = mPH;
+    }
+
+
 }
