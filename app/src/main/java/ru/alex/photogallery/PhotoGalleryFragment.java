@@ -20,15 +20,14 @@ import android.widget.SearchView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-public class PhotoGalleryFragment extends Fragment {
+public class PhotoGalleryFragment extends VisibleFragment {
     private RecyclerView mPhotoRecyclerView;
     private static final String TAG = "PhotoGalleryFragment";
     private List<GalleryItem> mItems = new ArrayList<>();
@@ -116,20 +115,32 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class PhotoHolder extends RecyclerView.ViewHolder {
+    private class PhotoHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         private ImageView mItemImageView;
         private ProgressBar progressBar;
+        private GalleryItem mGalleryItem;
 
         public PhotoHolder(@NonNull View itemView) {
             super(itemView);
             progressBar = itemView.findViewById(R.id.loading_indicator);
             mItemImageView = itemView.findViewById(R.id.item_image_view);
+            itemView.setOnClickListener(this);
 
         }
 
         public void bindDrawable(Drawable drawable) {
             mItemImageView.setImageDrawable(drawable);
 
+        }
+
+        public void bindGalleryItem(GalleryItem galleryItem) {
+            mGalleryItem = galleryItem;
+        }
+        @Override
+        public void onClick(View v) {
+            Intent i = PhotoPageActivity
+                    .newIntent(getActivity(), mGalleryItem.getPhotoPageUri());
+            startActivity(i);
         }
     }
 
@@ -151,6 +162,7 @@ public class PhotoGalleryFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
+            holder.bindGalleryItem(galleryItem);
             holder.progressBar.setVisibility(View.VISIBLE);
             holder.mItemImageView.setVisibility(View.GONE);
             mThumbnailDownloader.queueThumbnail(holder, galleryItem.getmUrl());
